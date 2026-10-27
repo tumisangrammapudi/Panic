@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Panic Alert</title>
+<style>
+:root{--bg:#f6f4f2;--surface:#fff;--ink:#1d1a1a;--muted:#6b6464;--line:#ddd7d3;--alert:#d3202a;--alert-d:#9d1119;--ok:#1f7a4d;--wa:#1f9d55;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141112;--surface:#1f1a1b;--ink:#f4eeee;--muted:#a79d9d;--line:#3a3233;--alert:#ef4048;--alert-d:#b3202a;--ok:#4cc58a;--wa:#2bb673;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141112;--surface:#1f1a1b;--ink:#f4eeee;--muted:#a79d9d;--line:#3a3233;--alert:#ef4048;--alert-d:#b3202a;--ok:#4cc58a;--wa:#2bb673;color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Avenir Next","Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-tap-highlight-color:transparent}
+main{max-width:460px;margin:0 auto;padding:16px 20px 48px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+h1{font-size:1.4rem;margin:0}h2{font-size:1.05rem;margin:0 0 10px}
+.sub,.small{color:var(--muted);font-size:.85rem;line-height:1.45}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin:14px 0}
+label{display:block;font-size:.85rem;color:var(--muted);margin:10px 0 4px}
+input,textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+textarea{min-height:70px;resize:vertical}
+:focus-visible{outline:3px solid var(--alert);outline-offset:2px}
+.btn{font:600 1rem inherit;font-family:inherit;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:13px 16px;cursor:pointer;text-decoration:none;display:block;text-align:center;width:100%;margin-top:10px}
+.btn.red{background:var(--alert);border-color:var(--alert);color:#fff}
+.btn.wa{background:var(--wa);border-color:var(--wa);color:#fff}
+.btn.safe{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.sm{width:auto;margin:0;padding:8px 12px;font-size:.85rem}
+.link{background:none;border:0;color:var(--alert);font:600 .95rem inherit;font-family:inherit;cursor:pointer;padding:8px 0}
+.tabs,.chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.tab,.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:20px;padding:8px 14px;font:inherit;cursor:pointer}
+.tab.on,.chip.on{background:var(--alert);border-color:var(--alert);color:#fff;font-weight:700}
+.mem{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+.mem:first-of-type{border-top:0}.mem div{min-width:0}
+.err{color:var(--alert);font-size:.9rem;min-height:1.2em;margin-top:8px}
+.note{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:12px;margin-top:18px}
+.stage{display:flex;flex-direction:column;align-items:center;margin:16px 0}
+.btn-wrap{position:relative;width:min(70vw,270px);aspect-ratio:1}
+svg.ring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);pointer-events:none}
+svg.ring circle{fill:none;stroke-width:8}
+#track{stroke:var(--line)}#prog{stroke:var(--alert);stroke-linecap:round;stroke-dasharray:754;stroke-dashoffset:754}
+#panic{position:absolute;inset:14px;border-radius:50%;border:0;background:radial-gradient(circle at 35% 30%,var(--alert),var(--alert-d));color:#fff;font:700 1.9rem/1 inherit;font-family:inherit;box-shadow:0 10px 30px rgba(211,32,42,.35),inset 0 -6px 14px rgba(0,0,0,.25);touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer;transition:transform .15s}
+#panic.holding{transform:scale(.95)}
+.hint{margin-top:14px;color:var(--muted);font-size:.95rem;text-align:center}
+#alertView{display:none;position:fixed;inset:0;z-index:10;padding:calc(env(safe-area-inset-top,0px) + 24px) 20px calc(env(safe-area-inset-bottom,0px) + 24px);overflow:auto;color:#fff;background:#b3121b;animation:flash 1s steps(1) infinite}
+#alertView.on{display:block}
+@keyframes flash{0%{background:#b3121b}50%{background:#5d070c}}
+@media (prefers-reduced-motion:reduce){#alertView{animation:none}}
+#alertView .inner{max-width:460px;margin:0 auto}
+#alertView h2{font-size:1.9rem;margin:0 0 6px}
+#alertView .btn{border-color:#fff;background:rgba(255,255,255,.14);color:#fff}
+#alertView .btn.big{background:#fff;color:#8c0d14}
+#alertView .btn.wa{background:#1f9d55;border-color:#1f9d55}
+#alertView .btn.safe{background:var(--ok);border-color:var(--ok);margin-top:22px}
+#alertView h3{margin:20px 0 0;font-size:1rem}
+</style>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#d3202a"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Panic Alert"><link rel="apple-touch-icon" href="icon-192.png"><link rel="icon" href="icon-192.png"></head>
+<body>
+<main id="app"></main>
+<div id="alertView" role="alertdialog" aria-labelledby="aTitle"><div class="inner" id="alertBody"></div></div>
+
+<script>
+(function(){
+var $=function(id){return document.getElementById(id)};
+var S={pin:null,members:[],nums:[]},sess=null,tab="reg",preview=null,whoIdx=0,err="";
+function load(){try{var s=localStorage.getItem("pa2");if(s)S=Object.assign(S,JSON.parse(s))}catch(e){}}
+function save(){try{localStorage.setItem("pa2",JSON.stringify(S))}catch(e){}}
+async function hash(t){try{var b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("pa:"+t));return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,"0")}).join("")}catch(e){return "p:"+t}}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function parse(t){return t.split("\n").map(function(l){return l.split(",").map(function(x){return x.trim()})}).filter(function(r){return r[0]&&r[1]}).map(function(r){return {name:r[0],phone:r[1]}})}
+function tel(p){return String(p).replace(/[^\d+]/g,"")}
+function curMember(){var id=preview||(sess&&sess.role==="member"&&sess.id);return S.members.find(function(m){return m.id===id})}
+function people(m){return [{name:m.name,phone:m.phone}].concat(m.dependants||[])}
+
+function render(){
+  var a=$("app"),h="";
+  if(!sess){
+    h='<header><h1>Panic Alert</h1></header>';
+    if(!S.pin){
+      h+='<div class="card"><h2>Set your admin PIN</h2><p class="sub">You are the only person who can register members. Choose a PIN you will remember.</p><label for="pin1">Admin PIN (4+ digits)</label><input id="pin1" type="password" inputmode="numeric" autocomplete="off"><button class="btn red" data-act="setup">Save PIN</button><div class="err">'+esc(err)+'</div></div>';
+    }else{
+      h+='<div class="card"><h2>Sign in</h2><label for="who">Who are you?</label><select id="who"><option value="admin">Administrator</option>'+S.members.map(function(m){return '<option value="'+esc(m.id)+'">'+esc(m.name)+'</option>'}).join("")+'</select><label for="pin">PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="off"><button class="btn red" data-act="login">Sign in</button><div class="err">'+esc(err)+'</div><p class="small">There is no sign-up. Only the administrator can add members.</p></div>';
+    }
+    h+=demoNote();a.innerHTML=h;return;
+  }
+  var m=curMember(),isAdmin=sess.role==="admin";
+  h='<header><h1>Panic Alert</h1><button class="link" data-act="out">Sign out</button></header>';
+  if(isAdmin&&!preview){
+    h+='<div class="tabs">'+[["reg","Register"],["mem","Members"],["num","Numbers"]].map(function(t){return '<button class="tab'+(tab===t[0]?" on":"")+'" data-act="tab" data-t="'+t[0]+'">'+t[1]+'</button>'}).join("")+'</div>';
+    if(tab==="reg")h+=regView();else if(tab==="mem")h+=memView();else h+=numView();
+  }else if(m){
+    if(preview)h+='<button class="link" data-act="back">← Back to admin</button>';
+    h+=memberView(m);
+  }
+  h+=demoNote();a.innerHTML=h;
+  if(m&&(!isAdmin||preview))bindPanic();
+}
+function demoNote(){return '<div class="note small"><b>Demo mode.</b> Everything is saved on this phone only. A browser cannot place calls by itself, so alerts show one-tap Call, WhatsApp and Text buttons. The full native app does the calls automatically.</div>'}
+
+function regView(){return '<div class="card"><h2>Register a member</h2><label for="rn">Full name</label><input id="rn"><label for="rp">Phone (with country code)</label><input id="rp" type="tel"><label for="rpin">Member PIN (4+ digits)</label><input id="rpin" inputmode="numeric"><label for="rd">Dependants, one per line: Name, phone</label><textarea id="rd"></textarea><label for="rnb">Neighbours to call, one per line: Name, phone</label><textarea id="rnb"></textarea><button class="btn red" data-act="reg">Register member</button><div class="err">'+esc(err)+'</div></div>'}
+function memView(){
+  if(!S.members.length)return '<div class="card"><h2>No members yet</h2><p class="sub">Use the Register tab to add your first member.</p></div>';
+  return '<div class="card"><h2>Members ('+S.members.length+')</h2>'+S.members.map(function(m){return '<div class="mem"><div><b>'+esc(m.name)+'</b><div class="small">'+(m.dependants||[]).length+' dependants · '+(m.neighbours||[]).length+' neighbours</div></div><div style="display:flex;gap:6px"><button class="btn sm" data-act="open" data-id="'+esc(m.id)+'">Try</button><button class="btn sm" data-act="del" data-id="'+esc(m.id)+'">Remove</button></div></div>'}).join("")+'</div>'
+}
+function numView(){return '<div class="card"><h2>Emergency numbers</h2><p class="sub">One per line: Label, phone. Shown to every member and texted during an alert. Empty until you add them.</p><textarea id="en">'+esc(S.nums.map(function(n){return n.name+", "+n.phone}).join("\n"))+'</textarea><button class="btn red" data-act="saveNums">Save numbers</button><div class="err" id="numMsg"></div></div>'}
+function memberView(m){
+  var p=people(m),h="";
+  if(p.length>1)h+='<div class="chips" role="group" aria-label="Who needs help">'+p.map(function(x,i){return '<button class="chip'+(whoIdx===i?" on":"")+'" data-act="who" data-i="'+i+'">'+(i===0?"Me":esc(x.name))+'</button>'}).join("")+'</div>';
+  h+='<div class="stage"><div class="btn-wrap"><svg class="ring" viewBox="0 0 270 270" aria-hidden="true"><circle id="track" cx="135" cy="135" r="120"/><circle id="prog" cx="135" cy="135" r="120"/></svg><button id="panic" aria-label="Panic button. Press and hold for two seconds.">HOLD</button></div><div class="hint" id="hint">Hold for 2 seconds. Alert is for '+(whoIdx===0?"you":esc(p[whoIdx].name))+'.</div></div>';
+  h+='<div class="card"><h2>Emergency numbers</h2>'+(S.nums.length?S.nums.map(function(n){return '<a class="btn" href="tel:'+esc(tel(n.phone))+'">'+esc(n.name)+': '+esc(n.phone)+'</a>'}).join(""):'<p class="sub">None added yet. The administrator can add them.</p>')+'</div>';
+  return h;
+}
+
+// hold to activate
+var HOLD=2000,C=754,t0=0,raf=0,holding=false;
+function bindPanic(){
+  var b=$("panic"),prog=$("prog");if(!b)return;
+  function frame(){if(!holding)return;var f=Math.min(1,(performance.now()-t0)/HOLD);prog.style.strokeDashoffset=C*(1-f);if(f>=1){stop();openAlert();return}raf=requestAnimationFrame(frame)}
+  function start(e){if(holding)return;e.preventDefault();holding=true;t0=performance.now();b.classList.add("holding");try{navigator.vibrate&&navigator.vibrate(30)}catch(x){}raf=requestAnimationFrame(frame)}
+  function stop(){holding=false;cancelAnimationFrame(raf);b.classList.remove("holding");prog.style.strokeDashoffset=C}
+  b.addEventListener("pointerdown",start);
+  ["pointerup","pointercancel","pointerleave"].forEach(function(ev){b.addEventListener(ev,stop)});
+  b.addEventListener("contextmenu",function(e){e.preventDefault()});
+  b.addEventListener("keydown",function(e){if((e.key===" "||e.key==="Enter")&&!e.repeat)start(e)});
+  b.addEventListener("keyup",function(e){if(e.key===" "||e.key==="Enter")stop()});
+}
+
+// siren
+var ac=null,osc=null,lfo=null,sirenOn=false,buzz=0,link="";
+function sirenStart(){try{var AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;ac=ac||new AC();if(ac.state==="suspended")ac.resume();osc=ac.createOscillator();lfo=ac.createOscillator();var g=ac.createGain(),lg=ac.createGain();osc.type="square";osc.frequency.value=900;lfo.frequency.value=1.6;lg.gain.value=320;lfo.connect(lg);lg.connect(osc.frequency);g.gain.value=.25;osc.connect(g);g.connect(ac.destination);osc.start();lfo.start();sirenOn=true;var s=$("sirenBtn");if(s)s.textContent="Turn siren off"}catch(e){}}
+function sirenStop(){try{osc&&osc.stop();lfo&&lfo.stop()}catch(e){}osc=lfo=null;sirenOn=false;var s=$("sirenBtn");if(s)s.textContent="Turn siren on"}
+
+function smsHref(m,who){
+  var nums=(m.neighbours||[]).concat(S.nums).map(function(n){return tel(n.phone)}).filter(Boolean);
+  var body="EMERGENCY: "+who.name+" needs help."+(link?" Location: "+link:"");
+  return "sms:"+nums.join(",")+"?&body="+encodeURIComponent(body);
+}
+function openAlert(){
+  var m=curMember();if(!m)return;var who=people(m)[whoIdx]||people(m)[0];link="";
+  var h='<h2 id="aTitle">Alert active</h2><p id="locStatus">Finding your location…</p>';
+  h+='<h3>Neighbours</h3>';
+  h+=(m.neighbours||[]).length?(m.neighbours||[]).map(function(n){return '<a class="btn big" href="tel:'+esc(tel(n.phone))+'">Call '+esc(n.name)+'</a><a class="btn wa" data-wa="'+esc(tel(n.phone))+'" href="https://wa.me/'+esc(tel(n.phone).replace("+",""))+'" target="_blank" rel="noopener">WhatsApp '+esc(n.name)+'</a>'}).join(""):'<p>No neighbours registered for this member.</p>';
+  h+='<a class="btn big" id="smsBtn" href="'+smsHref(m,who)+'">Text neighbours and emergency numbers</a>';
+  if(S.nums.length)h+='<h3>Emergency numbers</h3>'+S.nums.map(function(n){return '<a class="btn" href="tel:'+esc(tel(n.phone))+'">Call '+esc(n.name)+'</a>'}).join("");
+  h+='<button class="btn" id="sirenBtn" type="button" data-act="siren" style="margin-top:20px">Turn siren off</button><button class="btn safe" data-act="safe">I’m safe, cancel alert</button>';
+  $("alertBody").innerHTML=h;$("alertView").classList.add("on");
+  sirenStart();
+  try{if(navigator.vibrate){navigator.vibrate([500,200,500]);clearInterval(buzz);buzz=setInterval(function(){navigator.vibrate([500,200,500])},3000)}}catch(e){}
+  function fail(){var l=$("locStatus");if(l)l.textContent="Location unavailable. Texts will go without it."}
+  try{navigator.geolocation.getCurrentPosition(function(pos){
+    var la=pos.coords.latitude.toFixed(5),lo=pos.coords.longitude.toFixed(5);link="https://maps.google.com/?q="+la+","+lo;
+    var l=$("locStatus");if(l)l.textContent="Location found ("+la+", "+lo+"). It is included in your text.";
+    var s=$("smsBtn");if(s)s.href=smsHref(m,who);
+  },fail,{enableHighAccuracy:true,timeout:10000,maximumAge:30000})}catch(e){fail()}
+}
+function closeAlert(){$("alertView").classList.remove("on");sirenStop();clearInterval(buzz);try{navigator.vibrate&&navigator.vibrate(0)}catch(e){}}
+
+var act={
+  setup:async function(){var p=$("pin1").value.trim();if(!/^\d{4,}$/.test(p)){err="Use at least 4 digits.";return render()}S.pin=await hash(p);save();err="";render()},
+  login:async function(){var w=$("who").value,p=$("pin").value.trim(),hp=await hash(p);
+    if(w==="admin"){if(hp===S.pin){sess={role:"admin"};tab="reg";err=""}else err="Wrong PIN."}
+    else{var m=S.members.find(function(x){return x.id===w});if(m&&hp===m.pin){sess={role:"member",id:m.id};whoIdx=0;err=""}else err="Wrong PIN."}
+    render()},
+  out:function(){sess=null;preview=null;err="";render()},
+  tab:function(t){tab=t.dataset.t;err="";render()},
+  reg:async function(){var n=$("rn").value.trim(),p=$("rp").value.trim(),pin=$("rpin").value.trim();
+    if(!n||!p||!/^\d{4,}$/.test(pin)){err="Name, phone and a PIN of 4+ digits are required.";return render()}
+    S.members.push({id:"m"+Date.now(),name:n,phone:p,pin:await hash(pin),dependants:parse($("rd").value),neighbours:parse($("rnb").value)});
+    save();err="";tab="mem";render()},
+  del:function(t){var m=S.members.find(function(x){return x.id===t.dataset.id});if(m&&confirm("Remove "+m.name+"?")){S.members=S.members.filter(function(x){return x!==m});save();render()}},
+  open:function(t){preview=t.dataset.id;whoIdx=0;render()},
+  back:function(){preview=null;render()},
+  saveNums:function(){S.nums=parse($("en").value);save();render();var e=$("numMsg");if(e){e.style.color="var(--ok)";e.textContent="Saved."}},
+  who:function(t){whoIdx=+t.dataset.i;render()},
+  siren:function(){sirenOn?sirenStop():sirenStart()},
+  safe:closeAlert
+};
+document.addEventListener("click",function(e){var t=e.target.closest("[data-act]");if(t&&act[t.dataset.act])act[t.dataset.act](t)});
+load();render();
+})();
+</script>
+<script>if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(function(){});</script></body>
+</html>
